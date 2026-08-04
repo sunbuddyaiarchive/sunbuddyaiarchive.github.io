@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sunbuddy AI</title>
+    <style>
+        :root {
+            --primary-yellow: #f1b83a;
+            --main-bg: #fff5d1;
+            --dark-sidebar: #3d2303;
+            --light-sidebar: #523107;
+            --text-dark: #333333;
+            --input-border: #ebdca7;
+            --assistant-bubble: #f0ebdc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body,
+        html {
+            height: 100%;
+            background-color: var(--main-bg);
+            overflow: hidden;
+        }
+
+        .app-layout {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: var(--dark-sidebar);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.2s ease;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .sidebar.closed {
+            width: 110px;
+        }
+        .sidebar.closed .logo-text,
+        .sidebar.closed .menu-items,
+        .sidebar.closed .chat-list {
+            display: none;
+        }
+        .sidebar-header {
+            height: 60px;
+            background-color: var(--dark-sidebar);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sun-logo {
+            width: 42px;
+            height: 42px;
+            background-image: url('./images/sunbuddyailogo.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .logo-text {
+            font-size: 1.3rem;
+            color: #fffdec;
+            user-select: none;
+        }
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        .menu-items {
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            font-size: 0.95rem;
+            color: #f5ebd5;
+        }
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 8px 10px;
+            margin: 0 -10px;
+            border-radius: 8px;
+            transition: background-color 0.15s;
+            user-select: none;
+        }
+        .menu-item:hover {
+            background-color: var(--light-sidebar);
+        }
+        hr {
+            border-color: #523107;
+            opacity: 1;
+            color: #523107
+        }
+        .chat-list {
+            flex: 1;
+            padding: 30px 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .chat-item {
+            padding: 12px 15px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            position: relative;
+            background-color: transparent;
+        }
+        .chat-item:hover {
+            background-color: #2d1a03;
+            color: #ffffff;
+        }
+        .chat-item.active {
+            background-color: var(--light-sidebar);
+            color: #ffffff;
+        }
+        .chat-item.active:hover {
+            background-color: #1f0f01;
+            color: #ffffff;
+        }
+        .chat-item .chat-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dots-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            background-color: transparent;
+            transition: background-color 0.15s ease;
+            border: none;
+            flex-shrink: 0;
+            user-select: none;
+            padding: 0;
+            line-height: 1;
+        }
+        .dots-btn:hover {
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+        .dots-menu {
+            position: absolute;
+            right: 0;
+            top: 34px;
+            background-color: #2d1a03;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+            padding: 4px 0;
+            min-width: 130px;
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            border: 1px solid #523107;
+        }
+        .dots-menu.open {
+            display: flex;
+        }
+        .dots-menu-item {
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            color: #f5ebd5;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.1s;
+            user-select: none;
+        }
+        .dots-menu-item:hover {
+            background-color: #523107;
+        }
+        .dots-menu-item.danger {
+            color: #f7a1a1;
+        }
+        .dots-menu-item.danger:hover {
+            background-color: #4f1a1a;
+        }
+
+        .main-window {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--main-bg);
+        }
+        .top-banner {
+            height: 60px;
+            background-color: var(--primary-yellow);
+            width: 100%;
+            flex-shrink: 0;
+        }
+        .chat-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .messages-container {
+            width: 100%;
+            max-width: 750px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex: 1;
+        }
+        /* When sidebar is collapsed, expand the chat area */
+        .sidebar.closed ~ .main-window .messages-container,
+        .sidebar.closed ~ .main-window .pending-attachments,
+        .sidebar.closed ~ .main-window .controls-row {
+            max-width: 100%;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+        .empty-chat-placeholder {
+            color: #9c927c;
+            text-align: center;
+            padding: 40px 0;
+            font-size: 1rem;
+            user-select: none;
+        }
+
+        .message-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            width: 100%;
+        }
+        .message-row.user {
+            justify-content: flex-end;
+        }
+        .message-row.assistant {
+            justify-content: flex-start;
+        }
+
+        .avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .avatar.user-avatar {
+            background-image: url('./images/user/default.png');
+        }
+        .avatar.assistant-avatar {
+            background-image: url('./images/sunbuddyailogo.png');
+            background-size: contain;
+            background-color: #fff5d1;
+        }
+
+        .bubble-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 75%;
+        }
+        .bubble-content .bubble {
+            padding: 16px 24px;
+            border-radius: 24px;
+            font-size: 1rem;
+            word-break: break-word;
+        }
+        .bubble-content .bubble.user-bubble {
+            background-color: #fbe69e;
+            color: var(--text-dark);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .bubble-content .bubble.assistant-bubble {
+            background-color: var(--assistant-bubble);
+            color: var(--text-dark);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-attachments {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .attachment-chip {
+            background-color: #ffffff;
+            border: 1px solid var(--input-border);
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .attachment-chip .file-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--primary-yellow);
+            flex-shrink: 0;
+        }
+        .image-thumb {
+            position: relative;
+            width: 92px;
+            height: 92px;
+            border-radius: 12px;
+            overflow: visible;
+            flex-shrink: 0;
+        }
+        .image-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 1px solid var(--input-border);
+            display: block;
+        }
+        .image-thumb .thumb-x {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #000000;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            line-height: 1;
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+        }
+
+        .pending-attachments {
+            width: 100%;
+            max-width: 750px;
+            display: none;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 0 4px 8px 4px;
+        }
+        .pending-attachments.visible {
+            display: flex;
+        }
+        .pending-chip {
+            background-color: #ffffff;
+            border: 1px solid var(--input-border);
+            border-radius: 10px;
+            padding: 6px 10px;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .pending-chip .remove-chip {
+            cursor: pointer;
+            color: #9c927c;
+            font-weight: bold;
+        }
+
+        .controls-row {
+            width: 100%;
+            max-width: 750px;
+            margin-top: auto;
+            background-color: #ffffff;
+            border: 2px solid var(--input-border);
+            border-radius: 16px;
+            padding: 10px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+            position: relative;
+        }
+        .controls-bottom-row {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .plus-menu {
+            position: absolute;
+            bottom: 52px;
+            left: 15px;
+            background-color: #ffffff;
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            padding: 6px;
+            display: none;
+            flex-direction: column;
+            min-width: 190px;
+            z-index: 10;
+        }
+        .plus-menu.open {
+            display: flex;
+        }
+        .plus-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            background: none;
+            border: none;
+            text-align: left;
+            width: 100%;
+        }
+        .plus-menu-item:hover {
+            background-color: #fff5d1;
+        }
+        .text-box {
+            width: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            font-size: 1rem;
+            color: var(--text-dark);
+            height: 24px;
+            line-height: 24px;
+            text-align: left;
+            background: transparent;
+        }
+        .text-box::placeholder {
+            color: #9c927c;
+        }
+        .action-send {
+            background-color: var(--primary-yellow);
+            color: #000000;
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        .action-send.broken {
+            background-color: #d1c9b4;
+            color: #000000;
+            cursor: default;
+        }
+        .action-send.loading {
+            background-color: #d1c9b4;
+            cursor: default;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        #plusBtn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: background-color 0.15s;
+            border: none;
+            font-size: 20px;
+            font-weight: bold;
+            flex-shrink: 0;
+            user-select: none;
+        }
+        #plusBtn:hover {
+            background-color: #ebdca7;
+        }
+        .chat-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .chat-list::-webkit-scrollbar-thumb {
+            background: #523107;
+            border-radius: 4px;
+        }
+        .chat-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-layout">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <div class="sun-logo"></div>
+                    <span class="logo-text">Sunbuddy AI</span>
+                </div>
+                <button class="toggle-btn" id="toggleButton" onclick="handleToggle()">&lt;</button>
+            </div>
+            <div class="menu-items">
+                <div class="menu-item">⟲ Deleted Chats</div>
+                <div class="menu-item">🗀 Your Projects</div>
+                <div class="menu-item">⚙ Settings</div>
+                <hr />
+            </div>
+            <div class="chat-list" id="chatList"></div>
+        </div>
+
+        <div class="main-window">
+            <div class="top-banner"></div>
+
+            <div class="chat-view" id="chatView">
+                <div class="messages-container" id="chatDisplay"></div>
+
+                <div class="pending-attachments" id="pendingAttachments"></div>
+
+                <div class="controls-row">
+                    <div class="plus-menu" id="plusMenu">
+                        <button type="button" class="plus-menu-item" onclick="handleCreateImages()">
+                            Create images
+                        </button>
+                        <button type="button" class="plus-menu-item" onclick="handleShareFiles()">
+                            Share files
+                        </button>
+                    </div>
+
+                    <input type="file" id="fileInput" multiple style="display:none;" onchange="handleFilesSelected(event)" />
+
+                    <textarea class="text-box" id="userInput" placeholder="Ask Sunbuddy AI anything..."></textarea>
+
+                    <div class="controls-bottom-row">
+                        <button id="plusBtn" onclick="togglePlusMenu(event)">+</button>
+                        <button class="action-send" id="sendBtn" onclick="executeSend()">></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // STATE
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        let chats = [];
+        let activeChatId = null;
+        let nextId = 1;
+        let pendingFiles = [];
+        let isSending = false;
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // DOM REFS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        const sidebar = document.getElementById('sidebar');
+        const toggleButton = document.getElementById('toggleButton');
+        const chatList = document.getElementById('chatList');
+        const chatDisplay = document.getElementById('chatDisplay');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const plusBtn = document.getElementById('plusBtn');
+        const plusMenu = document.getElementById('plusMenu');
+        const fileInput = document.getElementById('fileInput');
+        const pendingAttachments = document.getElementById('pendingAttachments');
+        const chatView = document.getElementById('chatView');
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // CHAT CRUD
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        function createNewChat(name) {
+            const chat = {
+                id: nextId++,
+                name: name || 'Untitled Chat',
+                messages: []
+            };
+            chats.push(chat);
+            return chat;
+        }
+
+        function getChat(id) {
+            return chats.find(c => c.id === id);
+        }
+
+        function getActiveChat() {
+            return activeChatId ? getChat(activeChatId) : null;
+        }
+
+        function deleteChat(id) {
+            const idx = chats.findIndex(c => c.id === id);
+            if (idx === -1) return;
+            chats.splice(idx, 1);
+            if (activeChatId === id) {
+                activeChatId = null;
+            }
+            closeAllDotsMenus();
+            renderAll();
+        }
+
+        function renameChat(id, newName) {
+            const chat = getChat(id);
+            if (!chat) return;
+            const trimmed = newName.trim();
+            if (trimmed === '') return;
+            chat.name = trimmed;
+            closeAllDotsMenus();
+            renderAll();
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // RENDER
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        function renderAll() {
+            renderChatList();
+            renderMessages();
+        }
+
+        function renderChatList() {
+            if (chats.length === 0) {
+                chatList.innerHTML = '<div style="color:#9c927c;padding:12px;font-size:0.9rem;text-align:center;">No chats</div>';
+                return;
+            }
+
+            let html = '';
+            for (const chat of chats) {
+                const isActive = chat.id === activeChatId;
+                const activeClass = isActive ? 'active' : '';
+                html += `
+                    <div class="chat-item ${activeClass}" data-chat-id="${chat.id}">
+                        <span class="chat-name">${escapeHtml(chat.name)}</span>
+                        <button class="dots-btn" data-chat-id="${chat.id}" onclick="toggleDotsMenu(event, ${chat.id})">⋮</button>
+                        <div class="dots-menu" id="dotsMenu-${chat.id}">
+                            <button class="dots-menu-item" onclick="handleRename(${chat.id})">Rename</button>
+                            <button class="dots-menu-item danger" onclick="handleDelete(${chat.id})">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }
+            chatList.innerHTML = html;
+
+            document.querySelectorAll('.chat-item').forEach(el => {
+                const id = parseInt(el.dataset.chatId, 10);
+                el.addEventListener('click', function(e) {
+                    if (e.target.closest('.dots-btn') || e.target.closest('.dots-menu')) return;
+                    handleChatClick(id);
+                });
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.dots-menu') && !e.target.closest('.dots-btn')) {
+                    closeAllDotsMenus();
+                }
+            });
+        }
+
+        function renderMessages() {
+            const chat = getActiveChat();
+            if (!chat) {
+                chatDisplay.innerHTML = '<div class="empty-chat-placeholder">No chat selected — send a message to start a new chat</div>';
+                return;
+            }
+            if (chat.messages.length === 0) {
+                chatDisplay.innerHTML = '<div class="empty-chat-placeholder">No messages yet — start chatting!</div>';
+                return;
+            }
+
+            let html = '';
+            for (const msg of chat.messages) {
+                if (msg.role === 'user') {
+                    const attachmentsHtml = msg.attachments && msg.attachments.length > 0 ?
+                        `<div class="user-attachments">
+                            ${msg.attachments.map(f => {
+                                if (f.isImage && f.dataUrl) {
+                                    return `<div class="image-thumb sent"><img src="${f.dataUrl}" alt="${f.name}" /></div>`;
+                                }
+                                return `<div class="attachment-chip"><span class="file-dot"></span><span>${escapeHtml(f.name)}</span></div>`;
+                            }).join('')}
+                        </div>` :
+                        '';
+
+                    const bubbleHtml = msg.text ?
+                        `<div class="bubble user-bubble">${escapeHtml(msg.text)}</div>` :
+                        '';
+
+                    html += `
+                        <div class="message-row user">
+                            <div class="bubble-content" style="align-items:flex-end;">
+                                ${attachmentsHtml}
+                                ${bubbleHtml}
+                            </div>
+                            <div class="avatar user-avatar"></div>
+                        </div>
+                    `;
+                } else if (msg.role === 'assistant') {
+                    html += `
+                        <div class="message-row assistant">
+                            <div class="avatar assistant-avatar"></div>
+                            <div class="bubble-content" style="align-items:flex-start;">
+                                <div class="bubble assistant-bubble">${escapeHtml(msg.text)}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            chatDisplay.innerHTML = html;
+            chatDisplay.scrollTop = chatDisplay.scrollHeight;
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // HANDLERS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        function handleChatClick(id) {
+            if (id === activeChatId) {
+                activeChatId = null;
+                closeAllDotsMenus();
+                renderAll();
+                chatView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                userInput.focus();
+                return;
+            }
+            activeChatId = id;
+            closeAllDotsMenus();
+            renderAll();
+            userInput.focus();
+        }
+
+        function toggleDotsMenu(e, chatId) {
+            e.stopPropagation();
+            const menu = document.getElementById(`dotsMenu-${chatId}`);
+            if (!menu) return;
+            closeAllDotsMenus();
+            menu.classList.toggle('open');
+        }
+
+        function closeAllDotsMenus() {
+            document.querySelectorAll('.dots-menu').forEach(m => m.classList.remove('open'));
+        }
+
+        function handleDelete(chatId) {
+            deleteChat(chatId);
+        }
+
+        function handleRename(chatId) {
+            const chat = getChat(chatId);
+            if (!chat) return;
+            const newName = prompt('Rename chat:', chat.name);
+            if (newName !== null) {
+                renameChat(chatId, newName);
+            }
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // SEND MESSAGE (exact logic you specified)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        function executeSend() {
+            if (isSending) return;
+
+            const messageText = userInput.value.trim();
+            if (messageText === '' && pendingFiles.length === 0) return;
+
+            let chat = getActiveChat();
+            if (!chat) {
+                chat = createNewChat('Untitled Chat');
+                activeChatId = chat.id;
+            }
+
+            const attachments = pendingFiles.map(f => ({
+                name: f.name,
+                size: f.size,
+                isImage: f.isImage,
+                dataUrl: f.dataUrl || null,
+            }));
+
+            chat.messages.push({
+                role: 'user',
+                text: messageText,
+                attachments: attachments,
+            });
+
+            userInput.value = '';
+            pendingFiles = [];
+            renderPendingAttachments();
+            renderAll();
+
+            isSending = true;
+            sendBtn.classList.add('loading');
+            sendBtn.disabled = true;
+
+            fetch('./api/sunbuddyai/message.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network error');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    let assistantText;
+                    // If 'type' contains "error" → show friendly error message
+                    if (data.type && data.type.toLowerCase().includes('error')) {
+                        assistantText = 'Sorry, an error happened. Please try again later.';
+                    } else {
+                        // Otherwise show the actual 'message' field
+                        assistantText = data.message || 'No message provided.';
+                    }
+                    chat.messages.push({
+                        role: 'assistant',
+                        text: assistantText,
+                        attachments: [],
+                    });
+                    renderAll();
+                })
+                .catch(() => {
+                    // Any error (network, parse, etc.) shows the same error message
+                    chat.messages.push({
+                        role: 'assistant',
+                        text: 'Sorry, an error happened. Please try again later.',
+                        attachments: [],
+                    });
+                    renderAll();
+                })
+                .finally(() => {
+                    isSending = false;
+                    sendBtn.classList.remove('loading');
+                    sendBtn.disabled = false;
+                });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // PLUS MENU & FILE HANDLING
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        function togglePlusMenu(e) {
+            e.stopPropagation();
+            plusMenu.classList.toggle('open');
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!plusMenu.contains(e.target) && e.target !== plusBtn) {
+                plusMenu.classList.remove('open');
+            }
+        });
+
+        function handleCreateImages() {
+            plusMenu.classList.remove('open');
+            userInput.value = 'Create an image of ';
+            userInput.focus();
+            userInput.selectionStart = userInput.selectionEnd = userInput.value.length;
+        }
+
+        function handleShareFiles() {
+            plusMenu.classList.remove('open');
+            fileInput.click();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function handleFilesSelected(e) {
+            const files = Array.from(e.target.files);
+            for (const f of files) {
+                const isImage = f.type.startsWith('image/');
+                const record = { name: f.name, size: f.size, isImage, dataUrl: null };
+                pendingFiles.push(record);
+                if (isImage) {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        record.dataUrl = evt.target.result;
+                        renderPendingAttachments();
+                    };
+                    reader.readAsDataURL(f);
+                }
+            }
+            renderPendingAttachments();
+            fileInput.value = '';
+        }
+
+        function renderPendingAttachments() {
+            if (pendingFiles.length === 0) {
+                pendingAttachments.classList.remove('visible');
+                pendingAttachments.innerHTML = '';
+                return;
+            }
+            pendingAttachments.classList.add('visible');
+            pendingAttachments.innerHTML = pendingFiles.map((f, i) => {
+                if (f.isImage) {
+                    const imgSrc = f.dataUrl || '';
+                    return `
+                        <div class="image-thumb pending">
+                            ${imgSrc ? `<img src="${imgSrc}" alt="${f.name}" />` : `<div style="width:100%;height:100%;background:#f2e9c9;border-radius:12px;"></div>`}
+                            <div class="thumb-x" onclick="removePendingFile(${i})">✕</div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="pending-chip">
+                        <span>${escapeHtml(f.name)} <span style="color:#9c927c;">(${formatFileSize(f.size)})</span></span>
+                        <span class="remove-chip" onclick="removePendingFile(${i})">✕</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function removePendingFile(index) {
+            pendingFiles.splice(index, 1);
+            renderPendingAttachments();
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // SIDEBAR TOGGLE
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        function handleToggle() {
+            sidebar.classList.toggle('closed');
+            toggleButton.innerHTML = sidebar.classList.contains('closed') ? '&gt;' : '&lt;';
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // UTILITY
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // KEYBOARD
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                executeSend();
+            }
+        });
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // START
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        renderAll();
+        userInput.focus();
+    </script>
+</body>
+</html>
