@@ -220,6 +220,7 @@
             display: flex;
             flex-direction: column;
             background-color: var(--main-bg);
+            min-width: 0;
         }
         .top-banner {
             height: 60px;
@@ -234,6 +235,7 @@
             align-items: center;
             padding: 20px;
             overflow-y: auto;
+            position: relative;
         }
         .messages-container {
             width: 100%;
@@ -245,9 +247,9 @@
             flex: 1;
         }
         /* When sidebar is collapsed, expand the chat area */
-        .sidebar.closed ~ .main-window .messages-container,
-        .sidebar.closed ~ .main-window .pending-attachments,
-        .sidebar.closed ~ .main-window .controls-row {
+        .sidebar.closed~.main-window .messages-container,
+        .sidebar.closed~.main-window .pending-attachments,
+        .sidebar.closed~.main-window .controls-row {
             max-width: 100%;
             padding-left: 20px;
             padding-right: 20px;
@@ -495,9 +497,15 @@
             animation: pulse 1s infinite;
         }
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                opacity: 1;
+            }
         }
         #plusBtn {
             width: 32px;
@@ -575,7 +583,7 @@
 
                     <div class="controls-bottom-row">
                         <button id="plusBtn" onclick="togglePlusMenu(event)">+</button>
-                        <button class="action-send" id="sendBtn" onclick="executeSend()" >></button>
+                        <button class="action-send" id="sendBtn" onclick="executeSend()">></button>
                     </div>
                 </div>
             </div>
@@ -672,15 +680,15 @@
                 const isActive = chat.id === activeChatId;
                 const activeClass = isActive ? 'active' : '';
                 html += `
-                    <div class="chat-item ${activeClass}" data-chat-id="${chat.id}">
-                        <span class="chat-name">${escapeHtml(chat.name)}</span>
-                        <button class="dots-btn" data-chat-id="${chat.id}" onclick="toggleDotsMenu(event, ${chat.id})">⋮</button>
-                        <div class="dots-menu" id="dotsMenu-${chat.id}">
-                            <button class="dots-menu-item" onclick="handleRename(${chat.id})">Rename</button>
-                            <button class="dots-menu-item danger" onclick="handleDelete(${chat.id})">Delete</button>
+                        <div class="chat-item ${activeClass}" data-chat-id="${chat.id}">
+                            <span class="chat-name">${escapeHtml(chat.name)}</span>
+                            <button class="dots-btn" data-chat-id="${chat.id}" onclick="toggleDotsMenu(event, ${chat.id})">⋮</button>
+                            <div class="dots-menu" id="dotsMenu-${chat.id}">
+                                <button class="dots-menu-item" onclick="handleRename(${chat.id})">Rename</button>
+                                <button class="dots-menu-item danger" onclick="handleDelete(${chat.id})">Delete</button>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
             }
             chatList.innerHTML = html;
 
@@ -702,7 +710,8 @@
         function renderMessages() {
             const chat = getActiveChat();
             if (!chat) {
-                chatDisplay.innerHTML = '<div class="empty-chat-placeholder">No chat selected — send a message to start a new chat</div>';
+                chatDisplay.innerHTML =
+                '<div class="empty-chat-placeholder">No chat selected — send a message to start a new chat</div>';
                 return;
             }
             if (chat.messages.length === 0) {
@@ -715,13 +724,13 @@
                 if (msg.role === 'user') {
                     const attachmentsHtml = msg.attachments && msg.attachments.length > 0 ?
                         `<div class="user-attachments">
-                            ${msg.attachments.map(f => {
-                                if (f.isImage && f.dataUrl) {
-                                    return `<div class="image-thumb sent"><img src="${f.dataUrl}" alt="${f.name}" /></div>`;
-                                }
-                                return `<div class="attachment-chip"><span class="file-dot"></span><span>${escapeHtml(f.name)}</span></div>`;
-                            }).join('')}
-                        </div>` :
+                                ${msg.attachments.map(f => {
+                                    if (f.isImage && f.dataUrl) {
+                                        return `<div class="image-thumb sent"><img src="${f.dataUrl}" alt="${f.name}" /></div>`;
+                                    }
+                                    return `<div class="attachment-chip"><span class="file-dot"></span><span>${escapeHtml(f.name)}</span></div>`;
+                                }).join('')}
+                            </div>` :
                         '';
 
                     const bubbleHtml = msg.text ?
@@ -729,27 +738,35 @@
                         '';
 
                     html += `
-                        <div class="message-row user">
-                            <div class="bubble-content" style="align-items:flex-end;">
-                                ${attachmentsHtml}
-                                ${bubbleHtml}
+                            <div class="message-row user">
+                                <div class="bubble-content" style="align-items:flex-end;">
+                                    ${attachmentsHtml}
+                                    ${bubbleHtml}
+                                </div>
+                                <div class="avatar user-avatar"></div>
                             </div>
-                            <div class="avatar user-avatar"></div>
-                        </div>
-                    `;
+                        `;
                 } else if (msg.role === 'assistant') {
                     html += `
-                        <div class="message-row assistant">
-                            <div class="avatar assistant-avatar"></div>
-                            <div class="bubble-content" style="align-items:flex-start;">
-                                <div class="bubble assistant-bubble">${escapeHtml(msg.text)}</div>
+                            <div class="message-row assistant">
+                                <div class="avatar assistant-avatar"></div>
+                                <div class="bubble-content" style="align-items:flex-start;">
+                                    <div class="bubble assistant-bubble">${escapeHtml(msg.text)}</div>
+                                </div>
                             </div>
-                        </div>
-                    `;
+                        `;
                 }
             }
             chatDisplay.innerHTML = html;
-            chatDisplay.scrollTop = chatDisplay.scrollHeight;
+
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // AUTO-SCROLL TO BOTTOM (FIX)
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // Use requestAnimationFrame to wait for the DOM to settle,
+            // then scroll the scrollable container (chatView) to the bottom.
+            requestAnimationFrame(() => {
+                chatView.scrollTop = chatView.scrollHeight;
+            });
         }
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -843,11 +860,9 @@
                 })
                 .then(data => {
                     let assistantText;
-                    // If 'type' contains "error" → show friendly error message
                     if (data.type && data.type.toLowerCase().includes('error')) {
                         assistantText = 'Sorry, an error happened. Please try again later.';
                     } else {
-                        // Otherwise show the actual 'message' field
                         assistantText = data.message || 'No message provided.';
                     }
                     chat.messages.push({
@@ -858,7 +873,6 @@
                     renderAll();
                 })
                 .catch(() => {
-                    // Any error (network, parse, etc.) shows the same error message
                     chat.messages.push({
                         role: 'assistant',
                         text: 'Sorry, an error happened. Please try again later.',
@@ -936,18 +950,18 @@
                 if (f.isImage) {
                     const imgSrc = f.dataUrl || '';
                     return `
-                        <div class="image-thumb pending">
-                            ${imgSrc ? `<img src="${imgSrc}" alt="${f.name}" />` : `<div style="width:100%;height:100%;background:#f2e9c9;border-radius:12px;"></div>`}
-                            <div class="thumb-x" onclick="removePendingFile(${i})">✕</div>
-                        </div>
-                    `;
+                            <div class="image-thumb pending">
+                                ${imgSrc ? `<img src="${imgSrc}" alt="${f.name}" />` : `<div style="width:100%;height:100%;background:#f2e9c9;border-radius:12px;"></div>`}
+                                <div class="thumb-x" onclick="removePendingFile(${i})">✕</div>
+                            </div>
+                        `;
                 }
                 return `
-                    <div class="pending-chip">
-                        <span>${escapeHtml(f.name)} <span style="color:#9c927c;">(${formatFileSize(f.size)})</span></span>
-                        <span class="remove-chip" onclick="removePendingFile(${i})">✕</span>
-                    </div>
-                `;
+                        <div class="pending-chip">
+                            <span>${escapeHtml(f.name)} <span style="color:#9c927c;">(${formatFileSize(f.size)})</span></span>
+                            <span class="remove-chip" onclick="removePendingFile(${i})">✕</span>
+                        </div>
+                    `;
             }).join('');
         }
 
@@ -963,6 +977,12 @@
         function handleToggle() {
             sidebar.classList.toggle('closed');
             toggleButton.innerHTML = sidebar.classList.contains('closed') ? '&gt;' : '&lt;';
+            // After the layout shift, re-scroll to bottom if there's an active chat
+            if (getActiveChat()) {
+                requestAnimationFrame(() => {
+                    chatView.scrollTop = chatView.scrollHeight;
+                });
+            }
         }
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
